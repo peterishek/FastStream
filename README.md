@@ -5,6 +5,54 @@ FastStream: AI-Powered Asynchronous Video Analytics Engine FastStream is a high-
 ┌───────────────────────┐│   Client Dashboard    │└─────▲───────────┬─────┘│           │(WebSockets)  (HTTP POST Upload)│           ▼┌─────┴─────────────────┐│    FastAPI Gateway    │◄─────► [ Redis Cache ]└─────────┬─────────────┘    (Rate Limits / Sessions)│(Publish Task)▼[ RabbitMQ Broker ]│(Consume Task)▼┌───────────────────────┐│  Celery Task Workers  │◄─────► [ Media Storage ]└───────────────────────┘          (FFmpeg / Analytics)
 
 
+faststream-analytics/
+│
+├── app/
+│   ├── __init__.py
+│   ├── main.py                 # FastAPI application factory and configuration
+│   ├── config.py               # Pydantic BaseSettings for environment variables
+|   |── database.py             # Async SQLAlchemy engine and session setup
+│   │
+│   ├── api/                    # HTTP and WebSocket endpoints
+│   │   ├── __init__.py
+│   │   ├── deps.py             # Dependency injection (Database, Auth, Redis)
+│   │   ├── v1/
+│   │   │   ├── __init__.py
+│   │   │   ├── auth.py         # Login, registration, and JWT generation
+│   │   │   ├── videos.py       # Async chunked file upload endpoints
+│   │   │   └── stream.py       # WebSocket real-time progress endpoints
+│   │
+│   ├── core/                   # Security, auth logic, and middlewares
+│   │   ├── __init__.py
+│   │   ├── security.py         # JWT hashing and token verification
+│   │   └── middleware.py       # Async Redis sliding-window rate limiter
+│   │
+│   ├── models/                 # Database entity definitions (SQLAlchemy or SQLModel)
+│   │   ├── __init__.py
+│   │   └── video.py            # Video metadata database schema
+│   │
+│   ├── schemas/                # Strict Pydantic v2 data validation shapes
+│   │   ├── __init__.py
+│   │   ├── token.py            # JWT token responses
+│   │   └── video.py            # Upload, update, and read payload schemas
+│   │
+│   └── worker/                 # Background processing task layer
+│       ├── __init__.py
+│       ├── celery_app.py       # Celery configuration connecting to RabbitMQ
+│       ├── tasks.py            # Celery processing tasks (FFmpeg audio extraction)
+│       └── utils.py            # Helper scripts (FFmpeg shell wrappers)
+│
+├── storage/                    # Local folder mocked for file storage upload targets
+│   └── uploads/
+│
+├── .env                        # Local configuration secrets
+├── .gitignore                  # Python, system, and environment exclusions
+├── Dockerfile                  # Multi-stage custom build for Python and FFmpeg
+├── docker-compose.yml          # Container multi-service orchestration
+└── requirements.txt            # Manifest of required Python packages
+
+
+
 ### Architectural Decisions
 * **FastAPI Gateway:** Chosen over Django for its native ASGI asynchronous performance, lower memory footprint, and seamless out-of-the-box support for concurrent persistent WebSocket connections.
 * **RabbitMQ Message Broker:** Utilized for enterprise-grade background task guarantees, ensuring zero data loss and robust retry mechanisms for heavy media extraction pipelines.
