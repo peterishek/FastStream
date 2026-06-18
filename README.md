@@ -187,3 +187,34 @@ If you prefer to skip installing system dependencies like RabbitMQ, Redis, or FF
 # Build the application images and run the infrastructure network
 docker compose up --build
 ```
+### 🪟 Special Instructions for Windows Users
+
+Running RabbitMQ and Celery natively on Windows requires specific workarounds due to ecosystem compatibility constraints. Follow these steps carefully:
+
+#### 1. Installing RabbitMQ on Windows
+The most reliable native method is using the [Chocolatey Package Manager](https://chocolatey.org):
+```powershell
+# Run in an administrative PowerShell terminal
+choco install rabbitmq
+```
+*Alternatively, you must install the **Erlang OTP** runtime first, followed by the official **RabbitMQ Windows Installer** executable.*
+
+#### 2. Running Redis on Windows
+Redis does not officially support Windows. You must install the latest port via Memurai or use the archived Microsoft Open Tech release:
+```powershell
+choco install redis-64
+redis-server.exe
+```
+
+#### 3. Crucial Workaround for Celery on Windows
+Celery 5.x **does not officially support Windows** due to limitations with the default pool implementation (`billiard`). If you try to run it normally, your workers will crash instantly with an `AttributeError` or lock up.
+
+**The Fix:** You must force Celery to use the `solo` or `threads` pool execution pool when starting the worker process on Windows.
+
+Launch your worker terminal using this exact flag:
+```powershell
+# Windows-specific execution command
+celery -A app.worker.celery_app worker --loglevel=info -P solo
+```
+*(Note: The `-P solo` flag forces Celery to process tasks inline on a single thread, bypassing the multi-processing block on Windows. For a true multi-threaded production environment on Windows, utilizing **Docker/WSL2** is highly recommended).*
+
